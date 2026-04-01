@@ -1,17 +1,17 @@
-import { Router } from "express";
+import { Response, Router } from "express";
 import { prisma } from "../lib/prisma";
 import { authMiddleware, AuthRequest } from "../middlewares/auth.middleware";
 
 const router = Router();
 
-router.get("/me", authMiddleware, (req: AuthRequest, res) => {
+router.get("/me", authMiddleware, (req: AuthRequest, res: Response) => {
   res.json({
     message: "User data fetched",
     user: req.user,
   });
 });
 
-router.get("/profile", authMiddleware, async (req: AuthRequest, res) => {
+router.get("/profile", authMiddleware, async (req: AuthRequest, res: Response) => {
   const userId = req.user!.userId;
 
   const user = await prisma.user.findUnique({
