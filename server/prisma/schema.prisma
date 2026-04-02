@@ -17,4 +17,18 @@ model User {
   email     String   @unique
   password  String
   createdAt DateTime @default(now())
+  
+  trainingPlans TrainingPlan[]
+}
+
+model TrainingPlan {
+  id          String   @id @default(uuid())
+  userId      String
+  planJson    Json
+  planText    String
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
 }
