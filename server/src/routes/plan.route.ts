@@ -29,6 +29,38 @@ planRoutes.get("/", authMiddleware, async (req: AuthRequest, res) => {
   }
 });
 
+planRoutes.get("/:id", authMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ message: "Missing id" });
+    }
+
+    const plan = await prisma.trainingPlan.findFirst({
+      where: {
+        id: id as string,
+        userId: req.user!.userId,
+      },
+      select: {
+        id: true,
+        planJson: true,
+        planText: true,
+        createdAt: true,
+      },
+    });
+    if (!plan) {
+      return res.status(404).json({ message: "Plan not found" });
+    }
+
+    return res.json({
+      plan,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Error getting plan" });
+  }
+});
+
 planRoutes.post("/generate", authMiddleware, async (req: AuthRequest, res) => {
   try {
     if (!req.body) {
