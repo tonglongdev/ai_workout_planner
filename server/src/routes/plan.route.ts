@@ -1,8 +1,112 @@
 import { Router } from "express";
+import OpenAI from "openai";
 import { prisma } from "../lib/prisma";
 import { authMiddleware, AuthRequest } from "../middlewares/auth.middleware";
+import * as z from "zod";
 
 const planRoutes = Router();
+const openai = new OpenAI();
+const planSchema = z.object({
+  title: z.string(),
+  days: z.array(
+    z.object({
+      day: z.number(),
+      focus: z.string(),
+      exercises: z.array(
+        z.object({
+          name: z.string(),
+          sets: z.number(),
+          reps: z.string(),
+        }),
+      ),
+    }),
+  ),
+});
+
+async function generatePlanWithRetry({
+  goal,
+  level,
+  days,
+  maxRetries = 2,
+}: {
+  goal: string;
+  level: string;
+  days: number;
+  maxRetries?: number;
+}) {
+  let lastError: any;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    console.log(`Attempt ${attempt + 1}/${maxRetries + 1}`);
+    try {
+      const prompt = `
+You are a professional fitness coach.
+
+Generate a workout plan in JSON format.
+
+User info:
+- Goal: ${goal}
+- Level: ${level}
+- Days per week: ${days}
+
+Return ONLY valid JSON with this structure:
+{
+  "title": string,
+  "days": [
+    {
+      "day": number,
+      "focus": string,
+      "exercises": [
+        {
+          "name": string,
+          "sets": number,
+          "reps": string
+        }
+      ]
+    }
+  ]
+}
+`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-5.4-nano",
+        messages: [
+          { role: "system", content: "You are a fitness coach." },
+          { role: "user", content: prompt },
+        ],
+      });
+
+      const content = completion.choices[0].message.content;
+
+      if (!content) throw new Error("Empty AI response");
+
+      // parse
+      const parsed = JSON.parse(content);
+
+      // validate
+      const result = planSchema.safeParse(parsed);
+
+      if (!result.success) {
+        throw new Error("Invalid schema");
+      }
+
+      // ✅ SUCCESS
+      return {
+        json: result.data,
+        text: content,
+      };
+    } catch (err) {
+      lastError = err;
+
+      console.log(`❌ Attempt ${attempt + 1} failed`, err);
+
+      if (attempt === maxRetries) {
+        throw lastError;
+      }
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+  }
+}
 
 planRoutes.get("/", authMiddleware, async (req: AuthRequest, res) => {
   try {
@@ -61,44 +165,40 @@ planRoutes.get("/:id", authMiddleware, async (req: AuthRequest, res) => {
   }
 });
 
-planRoutes.post("/generate", authMiddleware, async (req: AuthRequest, res) => {
-  try {
-    if (!req.body) {
-      return res.status(400).json({ message: "Missing request body" });
-    }
+planRoutes.post(
+  "/generate-plan",
+  authMiddleware,
+  async (req: AuthRequest, res) => {
+    try {
+      const { goal, level, days } = req.body;
 
-    const { goal, days } = req.body;
+      if (!goal || !level || !days) {
+        return res.status(400).json({ message: "Missing fields" });
+      }
 
-    if (!goal || !days) {
-      return res.status(400).json({ message: "Missing goal or days" });
-    }
+      const result = await generatePlanWithRetry({
+        goal,
+        level,
+        days,
+        maxRetries: 2,
+      });
 
-    // fake plan
-    const fakePlan = {
-      goal,
-      days: [
-        {
-          day: "Day 1",
-          exercises: ["Bench Press", "Push Up"],
+      const plan = await prisma.trainingPlan.create({
+        data: {
+          userId: req.user!.userId,
+          planJson: result!.json,
+          planText: result!.text,
         },
-      ],
-    };
+      });
 
-    // save DB
-    const savedPlan = await prisma.trainingPlan.create({
-      data: {
-        userId: req.user!.userId,
-        planJson: fakePlan,
-        planText: JSON.stringify(fakePlan),
-      },
-    });
-
-    return res.json({
-      data: { message: "Plan created", plan: savedPlan },
-    });
-  } catch (error) {
-    return res.status(500).json({ message: "Error generating plan" });
-  }
-});
+      res.json(plan);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({
+        message: "Failed to generate plan after retries",
+      });
+    }
+  },
+);
 
 export default planRoutes;
