@@ -4,6 +4,31 @@ import { authMiddleware, AuthRequest } from "../middlewares/auth.middleware";
 
 const planRoutes = Router();
 
+planRoutes.get("/", authMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+    const plans = await prisma.trainingPlan.findMany({
+      where: { userId: req.user!.userId },
+      skip: (Number(page) - 1) * Number(limit),
+      take: Number(limit),
+      orderBy: {
+        createdAt: "desc",
+      },
+      select: {
+        id: true,
+        planJson: true,
+        createdAt: true,
+      },
+    });
+
+    return res.json({
+      plans,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Error getting plan" });
+  }
+});
+
 planRoutes.post("/generate", authMiddleware, async (req: AuthRequest, res) => {
   try {
     if (!req.body) {
