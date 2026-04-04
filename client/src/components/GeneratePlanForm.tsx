@@ -4,19 +4,42 @@ import type { WorkoutDay } from "../types";
 const GeneratePlanForm = () => {
   const { mutate, isPending, error, data } = useGeneratePlan();
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (
+    e: React.FormEvent<HTMLFormElement>,
+    formData: { goal: string; level: string; days: number },
+  ) => {
     e.preventDefault();
-
+    console.log(formData);
     mutate({
-      goal: "muscle gain",
-      level: "beginner",
-      days: 3,
+      goal: formData.goal,
+      level: formData.level,
+      days: formData.days,
     });
   };
 
   return (
     <>
-      <form onSubmit={handleSubmit}>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          const formData = new FormData(e.currentTarget);
+          handleSubmit(e, {
+            goal: formData.get("goal") as string,
+            level: formData.get("level") as string,
+            days: parseInt(formData.get("days") as string, 10),
+          });
+        }}
+      >
+        <p>Goal:</p>
+        <input type="text" name="goal" />
+        <p>Level:</p>
+        <select name="level">
+          <option value="beginner">Beginner</option>
+          <option value="intermediate">Intermediate</option>
+          <option value="advanced">Advanced</option>
+        </select>
+        <p>Days:</p>
+        <input type="number" name="days" />
         <button type="submit" disabled={isPending}>
           {isPending ? "Generating..." : "Generate Plan"}
         </button>

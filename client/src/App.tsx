@@ -1,12 +1,11 @@
-import { useEffect } from "react";
+import GeneratePlanForm from "./components/GeneratePlanForm";
 
 function App() {
-    useEffect(() => {
-    fetch("http://localhost:3000")
-      .then(res => res.text())
-      .then(console.log);
-  }, []);
-  return <h1>AI Workout Planner</h1>;
+  return (
+    <>
+      <GeneratePlanForm />
+    </>
+  );
 }
 
 export default App;
