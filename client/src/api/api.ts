@@ -6,7 +6,7 @@ const API = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 API.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token") || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjMjI3NWY0NC0yOWY0LTRkYzUtYWQwNC0xY2EyZDI0YmNlNGIiLCJpYXQiOjE3NzUzNjU3OTYsImV4cCI6MTc3NTM2OTM5Nn0.hfoyE1sRCElv4irH2uE_1JOA-bpxCNqQhzxj__feX7I";
+  const token = localStorage.getItem("token");
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -14,5 +14,15 @@ API.interceptors.request.use((config) => {
 
   return config;
 });
+API.interceptors.response.use(
+  (res) => res,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem("token");
+      window.location.href = "/login";
+    }
+    return Promise.reject(error);
+  }
+);
 
 export default API;
