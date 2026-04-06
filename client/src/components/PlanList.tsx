@@ -1,8 +1,19 @@
+import { useEffect, useRef, useState } from "react";
 import { usePlans } from "../hooks/usePlans";
 import type { Plan } from "../types";
+import PlanDetail from "./PlanDetail";
+import PlanItem from "./PlanItem";
 
 const PlanList = () => {
   const { data, isLoading, error } = usePlans();
+  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+  const detailRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (selectedPlan) {
+      detailRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [selectedPlan]);
 
   if (isLoading) return <p>Loading plans...</p>;
   if (error) return <p>Error loading plans</p>;
@@ -13,19 +24,22 @@ const PlanList = () => {
       <h2>Your Plans</h2>
 
       {data?.plans.map((plan: Plan) => (
-        <div
+        <PlanItem
           key={plan.id}
-          style={{
-            border: "1px solid #ccc",
-            padding: "10px",
-            marginBottom: "10px",
-            cursor: "pointer",
-          }}
-        >
-          <h3>{plan.planJson.title}</h3>
-          <p>{new Date(plan.createdAt).toLocaleString()}</p>
-        </div>
+          plan={plan}
+          isSelected={selectedPlan?.id === plan.id}
+          onClick={() =>
+            setSelectedPlan((prev) => (prev?.id === plan.id ? null : plan))
+          }
+        />
       ))}
+      <div ref={detailRef}>
+        {selectedPlan ? (
+          <PlanDetail plan={selectedPlan} />
+        ) : (
+          <p>Select a plan to view details</p>
+        )}
+      </div>
     </div>
   );
 };
