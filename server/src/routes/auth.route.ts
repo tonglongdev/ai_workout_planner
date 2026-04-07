@@ -72,10 +72,16 @@ authRoutes.post("/login", async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    // 4. generate token
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET!, {
-      expiresIn: "1h",
+    // 4. generate tokens
+    const accessToken = jwt.sign({ userId: user.id }, process.env.JWT_SECRET!, {
+      expiresIn: "15m",
     });
+
+    const refreshToken = jwt.sign(
+      { userId: user.id },
+      process.env.JWT_REFRESH_SECRET!,
+      { expiresIn: "7d" },
+    );
 
     // 5. return user and token
     const { password: _, ...userWithoutPassword } = user;
@@ -83,12 +89,40 @@ authRoutes.post("/login", async (req, res) => {
     return res.json({
       data: userWithoutPassword,
       meta: {
-        accessToken: token,
+        accessToken,
+        refreshToken,
       },
     });
   } catch (error) {
     console.error("LOGIN ERROR:", error);
     return res.status(500).json({ message: "Server error" });
+  }
+});
+
+authRoutes.post("/refresh", async (req, res) => {
+  const { refreshToken } = req.body;
+
+  if (!refreshToken) {
+    return res.status(401).json({ message: "No refresh token" });
+  }
+
+  try {
+    const decoded = jwt.verify(
+      refreshToken,
+      process.env.JWT_REFRESH_SECRET!,
+    ) as { userId: string };
+
+    const newAccessToken = jwt.sign(
+      { userId: decoded.userId },
+      process.env.JWT_SECRET!,
+      { expiresIn: "15m" },
+    );
+
+    return res.json({
+      accessToken: newAccessToken,
+    });
+  } catch (err) {
+    return res.status(403).json({ message: "Invalid refresh token" });
   }
 });
 

@@ -3,7 +3,8 @@ import API from "../api/api";
 export const login = async (data: { email: string; password: string }) => {
   try {
     const res = await API.post("/api/auth/login", data);
-    localStorage.setItem("token", res.data.meta.accessToken);
+    localStorage.setItem("accessToken", res.data.meta.accessToken);
+    localStorage.setItem("refreshToken", res.data.meta.refreshToken);
 
     return res.data; // expect { token }
   } catch (error) {
