@@ -1,7 +1,5 @@
-export const getToken = () => {
-  return localStorage.getItem("accessToken");
-};
+import { getAccessToken } from "../api/token.service";
 
 export const isAuthenticated = () => {
-  return !!getToken();
+  return !!getAccessToken();
 };

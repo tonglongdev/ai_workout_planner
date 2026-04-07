@@ -1,4 +1,4 @@
-import API from "../api/api";
+import API from "../api/axios";
 
 export const login = async (data: { email: string; password: string }) => {
   try {

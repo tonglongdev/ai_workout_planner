@@ -1,5 +1,5 @@
 import type { PlansResponse } from "../types";
-import API from "./api";
+import API from "./axios";
 
 export const generatePlan = async (data: {
   goal: string;
