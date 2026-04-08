@@ -97,3 +97,38 @@ export const setupInterceptors = () => {
     },
   );
 };
+
+// Request → attach token
+
+// Response:
+//   nếu 200 → return bình thường
+
+//   nếu 401:
+//     nếu đang refresh:
+//       → đẩy vào queue, đợi
+
+//     nếu chưa refresh:
+//       → gọi refresh
+//         nếu success:
+//           → update token
+//           → retry request
+//           → xử lý queue
+//         nếu fail:
+//           → logout
+
+
+
+// 3 request → 3 interceptor instance
+
+//          ↓
+//    cùng đọc biến global
+
+//          ↓
+// 1 thằng lock (isRefreshing = true)
+// 2 thằng còn lại chờ (queue)
+
+//          ↓
+// refresh xong → processQueue
+
+//          ↓
+// 2 thằng kia chạy tiếp (.then)
